@@ -67,7 +67,7 @@ if __name__ == "__main__":
     # init model
     model = build_model(args.model,unique_ids)
 
-    model.load_state_dict(torch.load(args.path_model_eval))
+    model.load_state_dict(torch.load(args.path_model_loaded))
 
     model.eval()
 

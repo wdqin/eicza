@@ -1,6 +1,9 @@
-from model import earResnet18Model,earResnet50Model,earSqueezeNet10Model,earSqueezeNet11Model,earSEModel
+from model import earResnet18Model,earResnet50Model
+from model import earSqueezeNet10Model,earSqueezeNet11Model,earSEModel,earVGGFaceResNet50Model
 
-def build_model(model_name, unique_ids):
+
+
+def build_model(model_name, unique_ids,pretrain_file=None):
 	
 	# init model
 
@@ -14,8 +17,10 @@ def build_model(model_name, unique_ids):
       model = earSqueezeNet11Model(uniqueSubjectCount = len(unique_ids)).cuda()
     elif model_name == 'senet':
       model = earSEModel(uniqueSubjectCount = len(unique_ids)).cuda()
+    elif model_name == 'vggface2_resnet50':
+      model = earVGGFaceResNet50Model(uniqueSubjectCount = len(unique_ids),pretrained = pretrain_file).cuda()
     else:
-      print("the model name {} does not match any model available.".format(args.model))
+      print("the model name {} does not match any model available.".format(model_name))
       raise NotImplementedError
 
     return model

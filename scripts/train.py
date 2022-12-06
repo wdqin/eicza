@@ -1,6 +1,5 @@
 from param import args
 from utils import build_model
-# from model import earResnet18Model,earResnet50Model,earSqueezeNet10Model,earSqueezeNet11Model
 from model import train_model,evaluate_ear_model
 from datasets.icz_dataset import icz_dataset,prepare_data
 
@@ -141,7 +140,18 @@ if __name__ == "__main__":
     unique_ids.update(icz_dataset_val.unique_ids)
     unique_ids.update(icz_dataset_test.unique_ids)
 
-    model = build_model(args.model,unique_ids)
+    if args.path_model_loaded == "":
+      path_model_loaded = None
+    else:
+      path_model_loaded = args.path_model_loaded
+
+    model = build_model(args.model,unique_ids,path_model_loaded)
+
+    # if args.path_model_loaded != "":
+    #   if "vggface2" in args.model: # vggface2_resnet50
+    #     load_vggface2_state_dict(model,args.path_model_loaded)
+    #     print("model loaded from {}".format(args.path_model_loaded))
+    #     raise NotImplementedError
 
     icz_dataloader_val_list = [icz_dataloader_trainval,icz_dataloader_val]
     if args.debug == 1:
@@ -152,9 +162,7 @@ if __name__ == "__main__":
       print("the command is neither a debug or non-debug mode.")
       raise NotImplementedError  
     print("training completed.")
-    # print("icz_dataset_train: ",len(icz_dataset_train))
-    # print("icz_dataset_val: ",len(icz_dataset_val))
-    # print("icz_dataset_test: ",len(icz_dataset_test))
+
   else:
     raise NotImplementedError
 

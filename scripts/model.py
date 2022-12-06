@@ -1,13 +1,64 @@
 import torch
 import torch.nn as nn
-
-from tqdm import tqdm
 import torch.optim as optim
-
 import torch.hub as hub
 import torchvision
 
+from tqdm import tqdm
+import pickle
+
+from vggface2.models.resnet import resnet50
+
 hub.set_dir("./pre_trained/")
+
+N_IDENTITY = 8631  # total number of identities in VGG Face2
+
+
+def load_vggface2_state_dict(model, fname):
+    """
+    Set parameters converted from Caffe models authors of VGGFace2 provide.
+    See https://www.robots.ox.ac.uk/~vgg/data/vgg_face2/.
+    Arguments:
+        model: model
+        fname: file name of parameters converted from a Caffe model, assuming the file format is Pickle.
+    """
+    with open(fname, 'rb') as f:
+        weights = pickle.load(f, encoding='latin1')
+
+    own_state = model.state_dict()
+    for name, param in weights.items():
+        if name in own_state:
+            try:
+                own_state[name].copy_(torch.from_numpy(param))
+            except Exception:
+                raise RuntimeError('While copying the parameter named {}, whose dimensions in the model are {} and whose '\
+                                   'dimensions in the checkpoint are {}.'.format(name, own_state[name].size(), param.size()))
+        else:
+            raise KeyError('unexpected key "{}" in state_dict'.format(name))
+
+class earVGGFaceResNet50Model(torch.nn.Module):
+
+    def __init__(self,uniqueSubjectCount,pretrained = None):
+        super(earVGGFaceResNet50Model, self).__init__()
+
+        
+        if(pretrained is not None):
+            self.resnet = resnet50(num_classes=N_IDENTITY, include_top=False)
+            load_vggface2_state_dict(self.resnet,pretrained)
+            print("resnet loaded from {}".format(pretrained))
+        else:
+            self.resnet = resnet50(num_classes=uniqueSubjectCount, include_top=False)
+            print("resnet trained from scratch.")
+
+        self.fc = nn.Linear(2048, uniqueSubjectCount)
+
+    def forward(self, x):
+        
+        x = self.resnet(x)
+        x = x.view(x.size(0), -1)
+        x = self.fc(x)
+
+        return x
 
 class earResnet50Model(torch.nn.Module):
 
