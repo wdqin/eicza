@@ -1,0 +1,1 @@
+fgnet_dataset_train[0]: torch.Size([3, 224, 224])

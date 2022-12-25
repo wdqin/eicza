@@ -1,14 +1,16 @@
 flag="--debug 1
-	  --log_name icz_senet_lr5e5
-	  --info_path ./datasets/infantCohortZambia/info.csv
-	  --image_folder_path ./datasets/infantCohortZambia/jpgs/
-	  --dataset icz
+	  --log_name awe_squeezenet11_lr5e5
+	  --info_path ./datasets/awe_resized/info.csv
+	  --image_folder_path ./datasets/awe_resized/
+	  --dataset awe
 	  --batch_size 32
 	  --optim Adam
-	  --model senet
+	  --model squeezenet11
 	  --lr 0.00005
-	  --path_best ./snap/icz/icz_test
+	  --path_best ./snap/awe/awe_test_ImageNet_squeezenet11
 	  --epochs 200
+	  --path_model_loaded ImageNet
+	  --load_dataset_path ./datasets/bin/awe_resized.bin
 	  "
 
 python scripts/train.py $flag

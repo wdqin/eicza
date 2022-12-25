@@ -1,0 +1,6 @@
+input_matrix_train.shape: (1541, 1764)
+label_vector_train.shape: (1541,)
+input_matrix_val.shape: (312, 1764)
+label_vector_val.shape: (312,)
+input_matrix_test.shape: (312, 1764)
+label_vector_test.shape: (312,)

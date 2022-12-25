@@ -1,7 +1,11 @@
 from param import args
 from utils import build_model
 from model import train_model,evaluate_ear_model
-from datasets.icz_dataset import icz_dataset,prepare_data
+from hog import earHog
+from svm import earSVM
+from datasets.icz_dataset import icz_dataset,icz_prepare_data_ml,icz_prepare_data_none_ml
+from datasets.awe_dataset import awe_dataset,awe_prepare_data_ml,awe_prepare_data_none_ml
+from datasets.fgnet_dataset import fgnet_dataset,fgnet_prepare_data_ml,fgnet_prepare_data_none_ml
 
 import pandas as pd
 import torch
@@ -107,11 +111,6 @@ if __name__ == "__main__":
 
   # editing logging
 
-  logging.basicConfig(level=logging.INFO, format='%(message)s')
-  logger = logging.getLogger()
-  logger.addHandler(logging.FileHandler('./logs/'+args.log_name+"_"+dt_string, 'a+'))
-  print = logger.info
-
   # set up random seed
   random.seed(10)
   np.random.seed(0)
@@ -123,10 +122,18 @@ if __name__ == "__main__":
   print(args)
   writer = SummaryWriter(log_dir='./runs/log/'+args.log_name+"_"+dt_string)
 
+  logging.basicConfig(level=logging.INFO, format='%(message)s')
+  logger = logging.getLogger()
+  logger.addHandler(logging.FileHandler('./runs/log/'+args.log_name+"_"+dt_string+'/'+args.log_name+"_"+dt_string, 'a+'))
+  print = logger.info
+
   if args.dataset == 'icz':
 
     df = pd.read_csv(args.info_path)
-    icz_dataset_train,icz_dataset_val,icz_dataset_test,icz_dataloader_train,icz_dataloader_val,icz_dataloader_test = prepare_data(df,args)
+    icz_dataset_train,icz_dataset_val,icz_dataset_test,icz_dataloader_train,\
+                                    icz_dataloader_val,icz_dataloader_test = \
+                                    icz_prepare_data_ml(df,args)
+
 
     # make a train validation data loader
     icz_dataset_trainval = torch.utils.data.Subset(icz_dataset_train,list(range(200)))
@@ -145,13 +152,15 @@ if __name__ == "__main__":
     else:
       path_model_loaded = args.path_model_loaded
 
-    model = build_model(args.model,unique_ids,path_model_loaded)
-
-    # if args.path_model_loaded != "":
-    #   if "vggface2" in args.model: # vggface2_resnet50
-    #     load_vggface2_state_dict(model,args.path_model_loaded)
-    #     print("model loaded from {}".format(args.path_model_loaded))
-    #     raise NotImplementedError
+    if args.model == "sift":
+      print("the sift ear matching is implemented in eval.py.")
+      raise NotImplementedError
+    elif args.model == "hog":
+      print("the hog + svm ear matching is implemented in eval.py.")
+      raise NotImplementedError
+      
+    else:
+      model = build_model(args.model,unique_ids,path_model_loaded)
 
     icz_dataloader_val_list = [icz_dataloader_trainval,icz_dataloader_val]
     if args.debug == 1:
@@ -162,6 +171,81 @@ if __name__ == "__main__":
       print("the command is neither a debug or non-debug mode.")
       raise NotImplementedError  
     print("training completed.")
+  elif args.dataset == 'awe':
+    df = pd.read_csv(args.info_path)
+    awe_dataset_train,awe_dataset_val,awe_dataset_test,awe_dataloader_train,\
+                                    awe_dataloader_val,awe_dataloader_test = \
+                                    awe_prepare_data_ml(df,args)
+
+    # make a train validation data loader
+    awe_dataset_trainval = torch.utils.data.Subset(awe_dataset_train,list(range(200)))
+    awe_dataloader_trainval = DataLoader(awe_dataset_trainval,batch_size = 32, shuffle=True)
+
+    # count unique ids
+
+    unique_ids = set()
+    
+    unique_ids.update(awe_dataset_train.unique_ids)
+    unique_ids.update(awe_dataset_val.unique_ids)
+    unique_ids.update(awe_dataset_test.unique_ids)
+
+    if args.path_model_loaded == "":
+      path_model_loaded = None
+    else:
+      path_model_loaded = args.path_model_loaded
+
+    if args.model == "sift":
+      print("the sift ear matching is implemented in eval.py.")
+      raise NotImplementedError
+    elif args.model == "hog":
+      print("the hog + svm ear matching is implemented in eval.py.")
+      raise NotImplementedError
+    else:
+      model = build_model(args.model,unique_ids,path_model_loaded)
+
+    awe_dataloader_val_list = [awe_dataloader_trainval,awe_dataloader_val]
+    if args.debug == 1:
+      train(awe_dataloader_trainval,awe_dataloader_val_list,model,epochs = args.epochs,save_path_best = args.path_best)
+    elif args.debug == 0:
+      train(awe_dataloader_train,awe_dataloader_val_list,model,epochs = args.epochs,save_path_best = args.path_best)
+    else:
+      print("the command is neither a debug or non-debug mode.")
+      raise NotImplementedError  
+    print("training completed.")
+      
+  elif args.dataset == 'fgnet':
+    df = pd.read_csv(args.info_path)
+    fgnet_dataset_train,fgnet_dataset_val,fgnet_dataset_test,fgnet_dataloader_train,\
+                                    fgnet_dataloader_val,fgnet_dataloader_test = \
+                                    fgnet_prepare_data_ml(df,args)
+
+    # make a train validation data loader
+    fgnet_dataset_trainval = torch.utils.data.Subset(fgnet_dataset_train,list(range(200)))
+    fgnet_dataloader_trainval = DataLoader(fgnet_dataset_trainval,batch_size = 32, shuffle=True)
+
+    unique_ids = set()
+    
+    unique_ids.update(fgnet_dataset_train.unique_ids)
+    unique_ids.update(fgnet_dataset_val.unique_ids)
+    unique_ids.update(fgnet_dataset_test.unique_ids)
+
+    if args.path_model_loaded == "":
+      path_model_loaded = None
+    else:
+      path_model_loaded = args.path_model_loaded
+
+    model = build_model(args.model,unique_ids,path_model_loaded)
+
+    fgnet_dataloader_val_list = [fgnet_dataloader_trainval,fgnet_dataloader_val]
+    if args.debug == 1:
+      train(fgnet_dataloader_trainval,fgnet_dataloader_val_list,model,epochs = args.epochs,save_path_best = args.path_best)
+    elif args.debug == 0:
+      train(fgnet_dataloader_train,fgnet_dataloader_val_list,model,epochs = args.epochs,save_path_best = args.path_best)
+    else:
+      print("the command is neither a debug or non-debug mode.")
+      raise NotImplementedError  
+    print("training completed.")
+
 
   else:
     raise NotImplementedError

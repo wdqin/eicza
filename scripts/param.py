@@ -14,7 +14,9 @@ class Param:
         self.parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
 
         self.parser.add_argument('--log_name', type=str, default="", help='log name to save.')
-        self.parser.add_argument('--path_model_loaded', type=str, default="", help='path of the model to be loaded.')
+        self.parser.add_argument('--path_model_loaded', type=str, default="", help='path of \
+            the model to be loaded. For HOG, it will skip the training process.')
+        self.parser.add_argument('--load_dataset_path', type=str, default="", help='loaded dataset .bin path')
         self.parser.add_argument('--path_best', type=str, default="", help='path to save model snapshots.')
         self.parser.add_argument('--info_path', type=str, default="", help='an info .csv file path.')
         self.parser.add_argument('--image_folder_path', type=str, default="./", help='image (jpgs) folder path.')

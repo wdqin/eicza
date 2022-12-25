@@ -8,6 +8,7 @@ from tqdm import tqdm
 import pickle
 
 from vggface2.models.resnet import resnet50
+from vggface2.models.senet import senet50
 
 hub.set_dir("./pre_trained/")
 
@@ -43,14 +44,18 @@ class earVGGFaceResNet50Model(torch.nn.Module):
 
         
         if(pretrained is not None):
-            self.resnet = resnet50(num_classes=N_IDENTITY, include_top=False)
-            load_vggface2_state_dict(self.resnet,pretrained)
-            print("resnet loaded from {}".format(pretrained))
+            if (pretrained.endswith('.pkl')):
+                self.resnet = resnet50(num_classes=N_IDENTITY, include_top=False)
+                load_vggface2_state_dict(self.resnet,pretrained)
+                print("resnet loaded from {}".format(pretrained))
+            else:
+                self.resnet = resnet50(num_classes=N_IDENTITY, include_top=False)
+                print("senet loaded from {}".format(pretrained))
         else:
-            self.resnet = resnet50(num_classes=uniqueSubjectCount, include_top=False)
-            print("resnet trained from scratch.")
+            self.resnet = resnet50(num_classes=N_IDENTITY, include_top=False)
+            print("resnet trained from scratch or loaded from saved snapshot.")
 
-        self.fc = nn.Linear(2048, uniqueSubjectCount)
+        self.fc = nn.Linear(2048, uniqueSubjectCount+1)
 
     def forward(self, x):
         
@@ -60,12 +65,44 @@ class earVGGFaceResNet50Model(torch.nn.Module):
 
         return x
 
+class earVGGFaceSENet50Model(torch.nn.Module):
+
+    def __init__(self,uniqueSubjectCount,pretrained = None):
+        super(earVGGFaceSENet50Model, self).__init__()
+
+        if(pretrained is not None):
+            if pretrained.endswith('.pkl'):
+                self.senet = senet50(num_classes=N_IDENTITY, include_top=False)
+                load_vggface2_state_dict(self.senet,pretrained)
+                print("senet loaded from {}".format(pretrained))
+            else:
+                self.senet = senet50(num_classes=N_IDENTITY, include_top=False)
+                print("senet loaded from {}".format(pretrained))
+        else:
+            self.senet = senet50(num_classes=N_IDENTITY, include_top=False)
+            print("senet trained from scratch or loaded from saved snapshot.")
+        self.fc = nn.Linear(2048, uniqueSubjectCount+1)
+
+    def forward(self, x):
+        
+        x = self.senet(x)
+        x = x.view(x.size(0), -1)
+        x = self.fc(x)
+
+        return x
+
 class earResnet50Model(torch.nn.Module):
 
-    def __init__(self,uniqueSubjectCount):
+    def __init__(self,uniqueSubjectCount,pretrained = None):
         super(earResnet50Model, self).__init__()
 
-        resNetModel = hub.load('pytorch/vision:v0.10.0', 'resnet50',pretrained=True)
+        if pretrained == 'ImageNet':
+            is_pretrained = True
+        else:
+            is_pretrained = False
+
+        resNetModel = hub.load('pytorch/vision:v0.10.0', 'resnet50',pretrained=is_pretrained)
+
         self.resNet = nn.Sequential(*list(resNetModel.children())[:-1])
 
         self.linear = torch.nn.Linear(2048, uniqueSubjectCount+1)
@@ -81,10 +118,15 @@ class earResnet50Model(torch.nn.Module):
 class earSqueezeNet10Model(torch.nn.Module):
     # squeezenet1_0 model
 
-    def __init__(self,uniqueSubjectCount):
+    def __init__(self,uniqueSubjectCount,pretrained = None):
         super(earSqueezeNet10Model, self).__init__()
 
-        squeezeNet = torchvision.models.squeezenet1_0(pretrained=True)
+        if pretrained == 'ImageNet':
+            is_pretrained = True
+        else:
+            is_pretrained = False
+
+        squeezeNet = torchvision.models.squeezenet1_0(pretrained=is_pretrained)
         self.squeezeNet_extract = nn.Sequential(*list(squeezeNet.children())[:-1])
 
         self.classifier = nn.Sequential(
@@ -107,10 +149,15 @@ class earSqueezeNet10Model(torch.nn.Module):
 class earSqueezeNet11Model(torch.nn.Module):
     # squeezenet1_1 model
 
-    def __init__(self,uniqueSubjectCount):
+    def __init__(self,uniqueSubjectCount,pretrained = None):
         super(earSqueezeNet11Model, self).__init__()
 
-        squeezeNet = torch.hub.load('pytorch/vision:v0.10.0', 'squeezenet1_1', pretrained=True)
+        if pretrained == 'ImageNet':
+            is_pretrained = True
+        else:
+            is_pretrained = False
+
+        squeezeNet = torch.hub.load('pytorch/vision:v0.10.0', 'squeezenet1_1', pretrained=is_pretrained)
         self.squeezeNet_extract = nn.Sequential(*list(squeezeNet.children())[:-1])
 
         self.classifier = nn.Sequential(
@@ -132,10 +179,15 @@ class earSqueezeNet11Model(torch.nn.Module):
 
 class earResnet18Model(torch.nn.Module):
 
-    def __init__(self,uniqueSubjectCount):
+    def __init__(self,uniqueSubjectCount,pretrained = None):
         super(earResnet18Model, self).__init__()
 
-        resNetModel = hub.load('pytorch/vision:v0.10.0', 'resnet18',pretrained=True)
+        if pretrained == 'ImageNet':
+            is_pretrained = True
+        else:
+            is_pretrained = False
+
+        resNetModel = hub.load('pytorch/vision:v0.10.0', 'resnet18',pretrained=is_pretrained)
         self.resNet = nn.Sequential(*list(resNetModel.children())[:-1])
 
         self.linear = torch.nn.Linear(512, uniqueSubjectCount+1)
@@ -192,71 +244,3 @@ def evaluate_ear_model(evalDataloader,earModel,split):
     print('Top-5 accuracy of the network on the {} ears: {:.2f} %'.format(split,100 * top5 / total))
 
   return correct / total, top5 / total
-
-# def evaluateEarModel(evalDataloader,earModel,split):
-#   total = 0
-#   correct = 0
-#   top5 = 0
-#   with torch.no_grad():
-#     for i,earInputBatch in enumerate(evalDataloader):
-#       logits = earModel(earInputBatch['earImage'])
-#       targets = torch.tensor(earInputBatch['earSubjectIdx']).long().cuda()
-
-#       logits_ = logits.clone()
-#       logits_sorted, indices = torch.sort(logits_,descending=True)
-#       _, predicted = torch.max(logits, 1)
-
-#       total += targets.size(0)
-#       correct += (predicted == targets).sum().item()
-      
-#       for i,target in enumerate(targets):
-#         if target in indices[i,:5]:
-#             top5+=1
-
-#     print('Top-1 accuracy of the network on the {} ears: {:.2f} %'.format(split,100 * correct / total))
-#     print('Top-5 accuracy of the network on the {} ears: {:.2f} %'.format(split,100 * top5 / total))
-#   return correct / total, top5 / total
-
-# def trainEarModel(trainDataloader,earModel,optimizer,criterion,setEpoch = 100,valDataloaderList=[],savePathBest="",savePathLast=""):
-#   running_loss = 0.0
-#   evaluateEvery = 100 #iterations
-#   iterCount = 0
-#   bestTop1Acc = 0
-#   bestTop5Acc = 0
-#   for epoch in range(setEpoch):
-#     print("epoch {} starts...".format(epoch))
-#     for i,earInputBatch in enumerate(trainDataloader):
-#       iterCount+=1
-#       optimizer.zero_grad()
-#       earInputBatch = earInputBatch
-#       logits = earModel(earInputBatch['earImage'])
-#       targets = torch.tensor(earInputBatch['earSubjectIdx']).long().cuda()
-#       loss = criterion(logits,targets)
-#       loss.backward()
-#       optimizer.step()
-#       running_loss += loss.item()
-#       if i % 20 == 1:    # print every 5 mini-batches
-#         print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 20:.3f}')
-#         running_loss = 0.0
-#       if iterCount % evaluateEvery == 0:
-#         accuracyList = []
-#         split = ['trainVal','val']
-#         for i,vallDataloader in enumerate(valDataloaderList):
-#           top1Acc,top5Acc = evaluateEarModel(vallDataloader,earModel,split[i])
-#           if split[i]=='val': #val
-#             accTop1ThisInterval = top1Acc
-#             if accTop1ThisInterval > bestTop1Acc:
-#               bestTop1Acc = accTop1ThisInterval
-#               print("new top-1 best Acc: {}".format(bestTop1Acc))
-#               torch.save(earModel.state_dict(), savePathBest+"Top1")
-
-#             accTop5ThisInterval = top5Acc
-#             if accTop5ThisInterval > bestTop5Acc or (accTop5ThisInterval == bestTop5Acc and top1Acc>bestTop1Acc):
-#               bestTop5Acc = accTop5ThisInterval
-#               print("new top-5 best Acc: {}".format(bestTop5Acc))
-#               torch.save(earModel.state_dict(), savePathBest+"Top5")
-
-#   split = ['trainVal','val']
-#   for i,vallDataloader in enumerate(valDataloaderList):
-#     top1Acc,top5Acc = evaluateEarModel(vallDataloader,earModel,split[i])
-#   torch.save(earModel.state_dict(), savePathLast)

@@ -1,11 +1,11 @@
 flag="--debug 0
-	  --info_path ./datasets/infantCohortZambia/info.csv
-	  --image_folder_path ./datasets/infantCohortZambia/jpgs/
-	  --dataset icz
+	  --info_path ./datasets/FGNET_resized/infoNoAgeProgression.csv
+	  --image_folder_path ./datasets/FGNET_resized/images/
+	  --dataset fgnet
 	  --batch_size 8
-	  --model senet
+	  --model vggface2_resnet50
 	  --eval_split val+test
-	  --path_model_eval ./snap/icz/icz_test_top1
+	  --path_model_loaded ./snap/fgnet/fgnet_test_1e4_from_scratch_NA_vggface2_resnet50_top1
 	  "
 
 python scripts/eval.py $flag

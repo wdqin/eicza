@@ -1,0 +1,1 @@
+Lossy conversion from float64 to uint8. Range [0.0, 26.00080754607916]. Convert image to uint8 prior to saving to suppress this warning.
